@@ -27,7 +27,7 @@ jobs:
                   restore-keys: pnpm-
 
             - name: 🗜️ Install dependencies
-              run: pnpm install
+              run: pnpm install --no-frozen-lockfile
             - name: 🏗 Build website
               run: pnpm run build
 
