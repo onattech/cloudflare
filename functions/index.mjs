@@ -53,7 +53,10 @@ router.get("/login", async (request, env) => {
 })
 
 // Catch-all route
-router.all("*", () => respondWithError(404))
+router.all("*", () => {
+    console.log("jhiiiiiiiiiiiiii")
+    return respondWithError(404)
+})
 
 export default {
     async fetch(request, env, ctx) {
@@ -95,3 +98,12 @@ router.get("/auth/callback", async (request, env) => {
     const resultHeaders = await auth0.handleCallback(request)
     return new Response("", resultHeaders)
 })
+
+function respondWithError(e) {
+    return new Response(e.stack || e, {
+        status: 500,
+        headers: {
+            "Content-Type": "text/plain;charset=UTF-8",
+        },
+    })
+}
