@@ -3,7 +3,9 @@ name = "cloudflare-worker"
 main = "functions/index.mjs"
 compatibility_date = "2023-05-18"
 
-# route = { pattern = "example.org/*", zone_name = "example.org" }
-
+routes = [
+    "https://cloudflare-bls.pages.dev/*",
+    "http:localhost:3000/*",
+]
 [site]
 bucket = "./build" # <-- Add your build directory name here.
