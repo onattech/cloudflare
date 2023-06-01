@@ -1,0 +1,5 @@
+# Top-level configuration
+name = "my-worker"
+main = "functions/index.js"
+
+route = { pattern = "example.org/*", zone_name = "example.org" }
