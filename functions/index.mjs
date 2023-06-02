@@ -2,7 +2,8 @@ import { Router } from "itty-router"
 import Auth0 from "./auth0"
 import manifestJSON from "__STATIC_CONTENT_MANIFEST"
 const assetManifest = JSON.parse(manifestJSON)
-console.log("🚀 ~ file: index.js:5 ~ assetManifest:", assetManifest)
+
+console.log("🚀 Top level")
 
 // Create a new router
 const router = Router()
