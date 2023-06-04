@@ -55,7 +55,7 @@ router.get("/login", async (request, env) => {
 
 // Catch-all route
 router.all("*", () => {
-    console.log("jhiiiiiiiiiiiiii")
+    console.log("catch all route")
     return respondWithError(404)
 })
 
