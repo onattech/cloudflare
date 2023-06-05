@@ -90,6 +90,34 @@ export function isBaseURL(url) {
     return parsedUrl.pathname === "/"
 }
 
+/**
+ * Converts a URL string into a plain JavaScript object and prints it.
+ * The object includes all the properties of a JavaScript URL object,
+ * with `searchParams` converted into a plain object.
+ *
+ * @param {string} url - The URL string to be parsed and printed.
+ *
+ * @example
+ * printURL('http://www.example.com/path?query=value&team=blue');
+ *
+ * ```js
+ * { href: 'http://www.example.com/path?query=value&team=blue',
+ *   origin: 'http://www.example.com',
+ *   protocol: 'http:',
+ *   username: '',
+ *   password: '',
+ *   host: 'www.example.com',
+ *   hostname: 'www.example.com',
+ *   port: '',
+ *   pathname: '/path',
+ *   search: '?query=value&team=blue',
+ *   searchParams: {
+ *       query: 'value',
+ *       team: 'blue'
+ *   },
+ *   hash: '' }
+ * ```
+ */
 function printURL(url) {
     url = new URL(url)
     let keys = Object.getOwnPropertyNames(Object.getPrototypeOf(url))
