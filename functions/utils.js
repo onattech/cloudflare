@@ -43,19 +43,19 @@ export async function generateStateValue() {
  * @example
  * ### Example 1: Extracting existing query parameters
  * ```javascript
- * const url = "http://localhost:8788/?code=9XmAS9oo6ZUAcfU3M6M9232_2tIlODCGyVl8nGU_dyWc-&state=5O54vujdYLB%2FnI9v9HhimR2sXWW6lF24rbMDdHLXM5s%3D";
+ * const url = "http://localhost:8788/?code=9Xm&state=5O5";
  * const { code, state } = getParams(url, ["code", "state"]);
- * console.log('Code:', code); // Outputs: "Code: 9XmAS9oo6ZUAcfU3M6M9232_2tIlODCGyVl8nGU_dyWc-"
- * console.log('State:', state); // Outputs: "State: 5O54vujdYLB%2FnI9v9HhimR2sXWW6lF24rbMDdHLXM5s%3D"
+ * console.log('Code:', code); // Outputs: "Code: 9Xm"
+ * console.log('State:', state); // Outputs: "State: 5O5"
  * ```
  *
  * @example
  * ### Example 2: Extracting a missing query parameter
  * ```javascript
- * const url = "http://localhost:8788/?code=9XmAS9oo6ZUAcfU3M6M9232_2tIlODCGyVl8nGU_dyWc-&state=5O54vujdYLB%2FnI9v9HhimR2sXWW6lF24rbMDdHLXM5s%3D";
+ * const url = "http://localhost:8788/?code=9Xm&state=5O5";
  * const { missing, state } = getParams(url, ["missing", "state"]);
  * console.log('Missing:', missing); // Outputs: "Missing: null"
- * console.log('State:', state); // Outputs: "State: 5O54vujdYLB%2FnI9v9HhimR2sXWW6lF24rbMDdHLXM5s%3D"
+ * console.log('State:', state); // Outputs: "State: 5O5"
  * ```
  */
 export function getParams(url, keys) {
@@ -134,4 +134,80 @@ function printURL(url) {
     }
 
     console.log(urlObject)
+}
+
+/**
+ * Converts a HTTP request headers object into a plain JavaScript object and prints it.
+ * The object includes all the properties of the headers object.
+ *
+ * @param {http.IncomingMessage} request - The HTTP request object.
+ *
+ * @example
+ * // prints: { 'content-type': 'application/json', 'user-agent': 'my-agent' }
+ * printHeaders(request);
+ */
+export function printHeaders(headers) {
+    let headersObject = {}
+    for (let key of [...headers]) {
+        headersObject[key[0]] = key[1]
+    }
+
+    console.log("Headers: ", JSON.stringify(headersObject, null, 4))
+}
+
+export function printRequest(request, isFull = false) {
+    let headersObject = {}
+    for (let key of [...request.headers]) {
+        headersObject[key[0]] = key[1]
+    }
+
+    let requestObject = {
+        keepalive: request.keepalive,
+        integrity: request.integrity,
+        ...(isFull && { cf: JSON.parse(JSON.stringify(request.cf)) }),
+        ...(isFull && {
+            signal: {
+                reason: request.signal.reason || "undefined",
+                aborted: request.signal.aborted,
+                throwIfAborted: "function",
+                addEventListener: "function",
+                removeEventListener: "function",
+                dispatchEvent: "function",
+            },
+        }),
+        ...(isFull && {
+            fetcher: {
+                fetch: "function",
+                connect: "function",
+                get: "function",
+                put: "function",
+                delete: "function",
+            },
+        }),
+        redirect: request.redirect,
+        headers: isFull ? headersObject : undefined,
+        url: request.url,
+        method: request.method,
+        clone: isFull ? "function" : undefined,
+        bodyUsed: request.bodyUsed,
+        body: request.body,
+        arrayBuffer: isFull ? "function" : undefined,
+        text: isFull ? "function" : undefined,
+        json: isFull ? "function" : undefined,
+        formData: isFull ? "function" : undefined,
+        blob: isFull ? "function" : undefined,
+    }
+
+    console.log("Context.Request: ", JSON.stringify(requestObject, null, 4))
+}
+
+export async function printKVStorage(KV) {
+    let KVStateObject = {}
+    let list = await KV.list()
+
+    for (let key of list.keys) {
+        KVStateObject[key.name] = await KV.get(key.name)
+    }
+
+    console.log("KV all: ", JSON.stringify(KVStateObject, null, 4))
 }
