@@ -144,23 +144,14 @@ function printURL(url) {
  *
  * @example
  * // prints: { 'content-type': 'application/json', 'user-agent': 'my-agent' }
- * printHeaders(request);
+ * printHeaders(context.request.headers);
  */
-export function printHeaders(headers) {
-    let headersObject = {}
-    for (let key of [...headers]) {
-        headersObject[key[0]] = key[1]
-    }
-
-    console.log("Headers: ", JSON.stringify(headersObject, null, 4))
+export function printContextRequestHeaders(headers) {
+    console.log("Headers: ", JSON.stringify(makeHeadersObject(headers), null, 4))
 }
 
-export function printRequest(request, isFull = false) {
-    let headersObject = {}
-    for (let key of [...request.headers]) {
-        headersObject[key[0]] = key[1]
-    }
-
+// Call with printContextRequest(context.request)
+export function printContextRequest(request, isFull = false) {
     let requestObject = {
         keepalive: request.keepalive,
         integrity: request.integrity,
@@ -185,7 +176,7 @@ export function printRequest(request, isFull = false) {
             },
         }),
         redirect: request.redirect,
-        headers: isFull ? headersObject : undefined,
+        headers: isFull ? makeHeadersObject(request.headers) : undefined,
         url: request.url,
         method: request.method,
         clone: isFull ? "function" : undefined,
@@ -210,4 +201,66 @@ export async function printKVStorage(KV) {
     }
 
     console.log("KV all: ", JSON.stringify(KVStateObject, null, 4))
+}
+
+export function printResponse(response) {
+    let responseObject = {
+        url: response.url,
+        redirected: response.redirected,
+        ok: response.ok,
+        headers: makeHeadersObject(response.headers),
+        statusText: response.statusText,
+        status: response.status,
+        bodyUsed: response.bodyUsed,
+        body: response.body,
+    }
+
+    console.log("Response: ", JSON.stringify(responseObject, null, 4))
+}
+
+/**
+ * Transforms an array of header tuples into a headers object.
+ *
+ * @param {Array} headers - An array of header tuples, where each tuple is an array of two strings: the header name and the header value.
+ * context.request.headers or any http request or response headers will be in this format.
+ * @returns {Object} - Returns an object where the keys are the header names and the values are the header values.
+ *
+ * @example
+ * ### Examples
+ * ```
+ * makeHeadersObject(context.request.headers)
+ * ```
+ *
+ * Returns:
+ * ```json
+ * {
+ *   "keepalive": false,
+ *   "integrity": "",
+ *   "redirect": "manual",
+ *   "url": "http://localhost:8788/",
+ *   "method": "GET",
+ *   "bodyUsed": false,
+ *   "body": null
+ * }
+ * ```
+ * <br/>
+ *
+ * ```
+ * makeHeadersObject([['Content-Type', 'application/json'], ['Authorization', 'Bearer token']])
+ * ```
+ * Returns:
+ * ```json
+ * {
+ *   "Content-Type": "application/json",
+ *   "Authorization": "Bearer token"
+ * }
+ * ```
+ */
+function makeHeadersObject(headers) {
+    let headersObject = {}
+    for (let key of headers) {
+        headersObject[key[0]] = key[1]
+    }
+
+    return headersObject
 }
