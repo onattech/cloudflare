@@ -118,7 +118,7 @@ export function isBaseURL(url) {
  *   hash: '' }
  * ```
  */
-function printURL(url) {
+export function printURL(url) {
     url = new URL(url)
     let keys = Object.getOwnPropertyNames(Object.getPrototypeOf(url))
 
@@ -136,6 +136,7 @@ function printURL(url) {
     console.log(urlObject)
 }
 
+// TODO: Improve
 /**
  * Converts a HTTP request headers object into a plain JavaScript object and prints it.
  * The object includes all the properties of the headers object.
@@ -150,6 +151,7 @@ export function printContextRequestHeaders(headers) {
     console.log("Headers: ", JSON.stringify(makeHeadersObject(headers), null, 4))
 }
 
+// TODO: Comment
 // Call with printContextRequest(context.request)
 export function printContextRequest(request, isFull = false) {
     let requestObject = {
@@ -192,6 +194,7 @@ export function printContextRequest(request, isFull = false) {
     console.log("Context.Request: ", JSON.stringify(requestObject, null, 4))
 }
 
+// TODO: Comment
 export async function printKVStorage(KV) {
     let KVStateObject = {}
     let list = await KV.list()
@@ -200,9 +203,37 @@ export async function printKVStorage(KV) {
         KVStateObject[key.name] = await KV.get(key.name)
     }
 
-    console.log("KV all: ", JSON.stringify(KVStateObject, null, 4))
+    console.log("💾 KV storage: ", JSON.stringify(KVStateObject, null, 4))
 }
 
+/**
+ * Prints a formatted response object to the console.
+ *
+ * @param {Object} response - The response object to format and print. This object usually comes from the fetch API and contains properties like url, redirected, ok, headers, statusText, status, bodyUsed, and body.
+ *
+ * @example
+ * ### Example
+ * ```
+ * printResponse(await fetch('http://localhost:8788/'))
+ * ```
+ *
+ * Prints:
+ * ```json
+ * {
+ *   "url": "http://localhost:8788/",
+ *   "redirected": false,
+ *   "ok": true,
+ *   "headers": {
+ *     "Content-Type": "application/json",
+ *     "Authorization": "Bearer token"
+ *   },
+ *   "statusText": "OK",
+ *   "status": 200,
+ *   "bodyUsed": false,
+ *   "body": null
+ * }
+ * ```
+ */
 export function printResponse(response) {
     let responseObject = {
         url: response.url,
@@ -215,7 +246,7 @@ export function printResponse(response) {
         body: response.body,
     }
 
-    console.log("Response: ", JSON.stringify(responseObject, null, 4))
+    console.log("🌐 Response: ", JSON.stringify(responseObject, null, 4))
 }
 
 /**
