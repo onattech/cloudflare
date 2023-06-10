@@ -7,6 +7,7 @@ const CLIENT_ID = "YvxH3l3ISyUtPfLhh0lxbKfQ01vKEVOD"
 const CLIENT_SECRET = "Fb4iyR08oqVrBuOA2V-4d4w-W-aWhCeO80pNVEpe_KfPaM7Fmqk1vqtcVX1lih4x"
 const REDIRECT_URI = "http://localhost:8788/callback"
 const COOKIEKEY = "loku-cookie"
+const COOKIEDOMAIN = ".pages.dev"
 
 export async function onRequest(context) {
     console.log("\n📢 Middleware called at", context.request.url)
@@ -77,7 +78,7 @@ export async function onRequest(context) {
         printResponse(resp)
         const KVState = await kv.get("State")
 
-        persistAuth(resp, KVState)
+        await persistAuth(resp, KVState, kv)
 
         return new Response(null, {
             status: 302,
@@ -118,13 +119,13 @@ async function validateIDToken(token) {
 
     // Verify JWT. Auth0 recommends jose: https://jwt.io/libraries?language=JavaScript
     const { payload } = await jose.jwtVerify(token, jwks, {
-        audience: this.clientId, // verify audience claim
+        audience: CLIENT_ID, // verify audience claim
         maxTokenAge: "12 hours", // verify max age of token
     })
 
     // Verify issuer claim
     const iss = new URL(payload.iss).hostname
-    if (iss !== this.domain) {
+    if (iss !== DOMAIN) {
         throw new Error(`Token iss value (${iss}) doesn't match configured AUTH0_DOMAIN`)
     }
 
@@ -188,7 +189,7 @@ async function verifySession(request) {
  * @param {*} storedState Stored state from original auth request
  * @returns object with status and headers for setting the cookie
  */
-async function persistAuth(exchange, storedState) {
+async function persistAuth(exchange, storedState, kv) {
     // Get the token exchange response
     const body = await exchange.json()
     if (body.error) {
@@ -207,25 +208,26 @@ async function persistAuth(exchange, storedState) {
     }
 
     // Store exchange response body in KV (session handling) after validation
-    const id = await putSession(JSON.stringify(body))
+    const id = await putSession(JSON.stringify(body), kv)
     const date = new Date()
     date.setDate(date.getDate() + 1) // 1 day
 
     // Make headers and set cookie with session ID
     const headers = {
-        // Location: new URL(storedState).href || "/",
+        // Location: new URL(storedState)?.href || "/",
         Location: "/",
         "Set-Cookie": serializedCookie(COOKIEKEY, id, {
             expires: date,
         }),
     }
+
     return { headers, status: 302 }
 }
 
 // Returns a serialized cookie string ready to be set in headers
 function serializedCookie(key, value, options = {}) {
     options = {
-        domain: this.cookieDomain,
+        domain: COOKIEDOMAIN,
         httpOnly: true,
         path: "/",
         secure: true, // requires SSL certificate
@@ -236,13 +238,20 @@ function serializedCookie(key, value, options = {}) {
 }
 
 // Store session data and return the id
-async function putSession(data) {
+async function putSession(data, kv) {
     const id = crypto.randomUUID()
-    await KV.put(`id-${id}`, data, {
+    await kv.put(`id-${id}`, data, {
         expirationTtl: 86400, // 1 day
     })
     return id
 }
+
+/**
+ * Gets the supplied date in seconds
+ * @param {Date} d
+ * @returns number
+ */
+export const dateInSecs = (d) => Math.ceil(Number(d) / 1000)
 
 // Curl request with cookie header
 // curl -H "loku-cookie: hello" http://localhost:8788
