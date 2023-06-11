@@ -1,31 +1,48 @@
-import { generateStateValue, getParams, isBaseURL, printContextRequestHeaders, printKVStorage, printContextRequest, printResponse } from "./utils"
+import { generateStateValue, getParams } from "./utils"
 import cookie from "cookie"
 import * as jose from "jose"
 
-const DOMAIN = "dev-v3vdfzghznzkmkfh.us.auth0.com"
-const CLIENT_ID = "YvxH3l3ISyUtPfLhh0lxbKfQ01vKEVOD"
-const CLIENT_SECRET = "Fb4iyR08oqVrBuOA2V-4d4w-W-aWhCeO80pNVEpe_KfPaM7Fmqk1vqtcVX1lih4x"
-const REDIRECT_URI = "http://localhost:8788/callback"
-const COOKIEKEY = "loku-cookie"
-const COOKIEDOMAIN = ".pages.dev"
+/*
+1. A user makes a request to the Cloudflare pages site.
+2. If the user is not logged in, they are redirected to the login page. By default this is hosted by Auth0.
+3. After logging in, the user is redirected back to the Workers application with a login code query parameter.
+4. The Workers application takes the login code parameter and exchanges it with Auth0 for authorization tokens.
+5. The Workers application verifies the tokens and extracts information about the user from them.
+*/
+
+// Global environment variables
+let domain = ""
+let client_id = ""
+let client_secret = ""
+let redirect_uri = ""
+let cookiekey = ""
+let cookiedomain = ""
 
 export async function onRequest(context) {
     console.log("\n📢 Middleware called at", context.request.url)
 
-    // printContextRequest(context.request)
-    // printContextRequestHeaders(context.request.headers)
+    // Assign environment variables
+    domain = context.env.DOMAIN
+    client_id = context.env.CLIENT_ID
+    client_secret = context.env.CLIENT_SECRET
+    redirect_uri = context.env.REDIRECT_URI
+    cookiekey = context.env.COOKIEKEY
+    cookiedomain = context.env.COOKIEDOMAIN
 
     // Initialize KV state
     const kv = context.env.KV
 
-    let { code, state: returnedState } = await getParams(context.request.url, ["code", "state"])
+    let { code } = await getParams(context.request.url, ["code", "state"])
+    const parsedUrl = new URL(context.request.url)
 
     // Check for session
-    const keys = await verifySession(context.request)
-    console.log("🚀 ~ file: _middleware.js:24 ~ onRequest ~ keys:", keys)
+    const keys = await verifySession(context.request, context.env.KV)
 
-    // Step 1: Make a call to get the code
-    if (!code && isBaseURL(context.request.url)) {
+    // Case 1: User isn't logged in. Gets redirected to Auth0 login page
+    // which on successful login will redirect the user back to /callback
+    // route with the code parameter
+    if (!keys && parsedUrl.pathname !== "/callback") {
+        console.log("🚏 🚥 1️⃣  User isn't logged in")
         try {
             const requestState = await generateStateValue()
             console.log("Setting request state in KV:", requestState)
@@ -36,8 +53,8 @@ export async function onRequest(context) {
             let url = "https://dev-v3vdfzghznzkmkfh.us.auth0.com/authorize"
             let params = {
                 response_type: "code",
-                client_id: CLIENT_ID,
-                redirect_uri: REDIRECT_URI,
+                client_id,
+                redirect_uri,
                 state: requestState,
                 scope: "openid profile",
             }
@@ -55,50 +72,30 @@ export async function onRequest(context) {
         }
     }
 
-    // Step 2: Check for code in callback and make a call for tokens
-    const parsedUrl = new URL(context.request.url)
+    // Case 2: Check for code in callback and make a call for tokens
     if (parsedUrl.pathname === "/callback") {
-        console.log("Callback route detected...")
+        console.log("🚏 🚥 2️⃣  Callback after login")
         console.log("Code returned from Auth0:", code)
 
         const body = JSON.stringify({
             grant_type: "authorization_code",
-            client_id: CLIENT_ID,
-            client_secret: CLIENT_SECRET,
-            audience: CLIENT_ID,
+            client_id,
+            client_secret,
+            audience: client_id,
             code,
-            redirect_uri: REDIRECT_URI,
+            redirect_uri,
         })
 
-        const resp = await fetch(`https://${DOMAIN}/oauth/token`, {
+        const resp = await fetch(`https://${domain}/oauth/token`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body,
         })
-        printResponse(resp)
         const KVState = await kv.get("State")
-
-        await persistAuth(resp, KVState, kv)
-
-        return new Response(null, {
-            status: 302,
-            headers: { Location: "/" },
-        })
+        return new Response("", await persistAuth(resp, KVState, kv))
     }
 
-    // Step 3: Verify state
-    if (code) {
-        const KVState = await kv.get("State")
-        KVState === returnedState
-            ? console.log("State returned with Auth0 code matches with State in KV Storage ✅")
-            : console.log("State returned with Auth0 code doesn't match with State in KV Storage ❌")
-    }
-
-    // Step 3: Make a call with code to get access token
-
-    // DEBUGGING
-    // printHeaders(context.request.headers)
-
+    // Case 3: User is logged in, continue
     try {
         console.log("⏩ middleware next...")
         return await context.next()
@@ -115,17 +112,17 @@ export async function onRequest(context) {
 // https://auth0.com/docs/secure/tokens/access-tokens#sample-access-token
 async function validateIDToken(token) {
     // Get remote keyset
-    const jwks = jose.createRemoteJWKSet(new URL(`https://${DOMAIN}/.well-known/jwks.json`))
+    const jwks = jose.createRemoteJWKSet(new URL(`https://${domain}/.well-known/jwks.json`))
 
     // Verify JWT. Auth0 recommends jose: https://jwt.io/libraries?language=JavaScript
     const { payload } = await jose.jwtVerify(token, jwks, {
-        audience: CLIENT_ID, // verify audience claim
+        audience: client_id, // verify audience claim
         maxTokenAge: "12 hours", // verify max age of token
     })
 
     // Verify issuer claim
     const iss = new URL(payload.iss).hostname
-    if (iss !== DOMAIN) {
+    if (iss !== domain) {
         throw new Error(`Token iss value (${iss}) doesn't match configured AUTH0_DOMAIN`)
     }
 
@@ -144,17 +141,17 @@ async function validateIDToken(token) {
  * @param {Request} request
  * @returns object with auth info or null
  */
-async function verifySession(request) {
+async function verifySession(request, kv) {
     const cookieHeader = request.headers.get("Cookie")
     // Check existing cookie
-    if (cookieHeader && cookieHeader.includes(COOKIEKEY)) {
+    if (cookieHeader && cookieHeader.includes(cookiekey)) {
         const cookies = cookie.parse(cookieHeader)
-        if (typeof cookies[COOKIEKEY] !== "string") {
+        if (typeof cookies[cookiekey] !== "string") {
             return null
         }
 
-        const id = cookies[COOKIEKEY]
-        const kvData = await kv.get(id)
+        const id = cookies[cookiekey]
+        const kvData = await kv.get("id-" + id)
 
         if (!kvData) {
             // We have a cookie but the KV data is missing or expired
@@ -216,7 +213,7 @@ async function persistAuth(exchange, storedState, kv) {
     const headers = {
         // Location: new URL(storedState)?.href || "/",
         Location: "/",
-        "Set-Cookie": serializedCookie(COOKIEKEY, id, {
+        "Set-Cookie": serializedCookie(cookiekey, id, {
             expires: date,
         }),
     }
@@ -227,7 +224,7 @@ async function persistAuth(exchange, storedState, kv) {
 // Returns a serialized cookie string ready to be set in headers
 function serializedCookie(key, value, options = {}) {
     options = {
-        domain: COOKIEDOMAIN,
+        domain: cookiedomain,
         httpOnly: true,
         path: "/",
         secure: true, // requires SSL certificate
