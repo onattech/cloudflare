@@ -53,7 +53,7 @@ export default class Auth0 {
 
         // Return payload
         return payload
-    }
+    } // ✅️
 
     // Utility to store a state param in KV
     // Predominantly the value is the URL requested by the user when this.authorize is called

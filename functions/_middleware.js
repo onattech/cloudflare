@@ -17,6 +17,7 @@ let client_secret = ""
 let redirect_uri = ""
 let cookiekey = ""
 let cookiedomain = ""
+let kv = null
 
 export async function onRequest(context) {
     console.log("\n📢 Middleware called at", context.request.url)
@@ -30,13 +31,13 @@ export async function onRequest(context) {
     cookiedomain = context.env.COOKIEDOMAIN
 
     // Initialize KV state
-    const kv = context.env.KV
+    kv = context.env.KV
 
     let { code } = await getParams(context.request.url, ["code", "state"])
     const parsedUrl = new URL(context.request.url)
 
     // Check for session
-    const keys = await verifySession(context.request, context.env.KV)
+    const keys = await verifySession(context.request)
 
     // Case 1: User isn't logged in. Gets redirected to Auth0 login page
     // which on successful login will redirect the user back to /callback
@@ -92,7 +93,7 @@ export async function onRequest(context) {
             body,
         })
         const KVState = await kv.get("State")
-        return new Response("", await persistAuth(resp, KVState, kv))
+        return new Response("", await persistAuth(resp, KVState))
     }
 
     // Case 3: User is logged in, continue
@@ -141,7 +142,7 @@ async function validateIDToken(token) {
  * @param {Request} request
  * @returns object with auth info or null
  */
-async function verifySession(request, kv) {
+async function verifySession(request) {
     const cookieHeader = request.headers.get("Cookie")
     // Check existing cookie
     if (cookieHeader && cookieHeader.includes(cookiekey)) {
@@ -186,7 +187,7 @@ async function verifySession(request, kv) {
  * @param {*} storedState Stored state from original auth request
  * @returns object with status and headers for setting the cookie
  */
-async function persistAuth(exchange, storedState, kv) {
+async function persistAuth(exchange, storedState) {
     // Get the token exchange response
     const body = await exchange.json()
     if (body.error) {
@@ -205,7 +206,7 @@ async function persistAuth(exchange, storedState, kv) {
     }
 
     // Store exchange response body in KV (session handling) after validation
-    const id = await putSession(JSON.stringify(body), kv)
+    const id = await putSession(JSON.stringify(body))
     const date = new Date()
     date.setDate(date.getDate() + 1) // 1 day
 
@@ -235,7 +236,7 @@ function serializedCookie(key, value, options = {}) {
 }
 
 // Store session data and return the id
-async function putSession(data, kv) {
+async function putSession(data) {
     const id = crypto.randomUUID()
     await kv.put(`id-${id}`, data, {
         expirationTtl: 86400, // 1 day
