@@ -3,8 +3,6 @@ import Auth0 from "./auth0"
 import manifestJSON from "__STATIC_CONTENT_MANIFEST"
 const assetManifest = JSON.parse(manifestJSON)
 
-console.log("🚀 Top level")
-
 // Create a new router
 const router = Router()
 
@@ -54,10 +52,7 @@ router.get("/login", async (request, env) => {
 })
 
 // Catch-all route
-router.all("*", () => {
-    console.log("catch all route")
-    return respondWithError(404)
-})
+router.all("*", () => respondWithError(404))
 
 export default {
     async fetch(request, env, ctx) {
@@ -97,6 +92,12 @@ export default {
 router.get("/auth/callback", async (request, env) => {
     const auth0 = new Auth0(env)
     const resultHeaders = await auth0.handleCallback(request)
+    return new Response("", resultHeaders)
+})
+
+router.get("/logout", async (request, env) => {
+    const auth0 = new Auth0(env)
+    const resultHeaders = await auth0.logout(request)
     return new Response("", resultHeaders)
 })
 
