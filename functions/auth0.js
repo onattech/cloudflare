@@ -107,17 +107,17 @@ export default class Auth0 {
             return { accessToken, idToken, userInfo }
         }
         return null
-    }
+    } // ✅️
 
     // Utility functions to handle session-storage in KV
     // If we want an extra layer of security, we can encrypt the values in KV
     async deleteSession(id) {
         await this.#env.KV.delete(`id-${id}`)
-    }
+    } // ✅️
 
     async getSession(id) {
         return this.#env.KV.get(`id-${id}`)
-    }
+    } // ✅️
 
     // Store session data and return the id
     async putSession(data) {
@@ -241,7 +241,7 @@ export default class Auth0 {
             ...options,
         }
         return cookie.serialize(key, value, options)
-    }
+    } // ✅️
 
     // Logs user out locally and at Auth0
     async logout(request) {

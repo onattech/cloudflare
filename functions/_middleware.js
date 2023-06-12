@@ -156,7 +156,6 @@ async function verifySession(request) {
 
         if (!kvData) {
             // We have a cookie but the KV data is missing or expired
-            console.log("We have a cookie but the KV data is missing or expired")
             return null
         }
 
@@ -168,7 +167,7 @@ async function verifySession(request) {
             userInfo = await validateIDToken(kvStored.id_token)
         } catch (err) {
             // Invalid stored session
-            await kv.delete(id)
+            await deleteSession(id)
             throw new Error("Unable to parse auth information from Workers KV")
         }
         if (!userInfo || !userInfo.sub) {
