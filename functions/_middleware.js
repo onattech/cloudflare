@@ -29,20 +29,20 @@ export async function onRequest(context) {
     redirect_uri = context.env.REDIRECT_URI
     cookiekey = context.env.COOKIEKEY
     cookiedomain = context.env.COOKIEDOMAIN
-
-    // Initialize KV state
     kv = context.env.KV
 
-    let { code } = await getParams(context.request.url, ["code", "state"])
-    const parsedUrl = new URL(context.request.url)
-
     // Check for session
-    const keys = await verifySession(context.request)
+    const auth = await verifySession(context.request)
+    if (auth && auth.accessToken) {
+        console.log("⏩ middleware next...")
+        return await context.next()
+    }
 
     // Case 1: User isn't logged in. Gets redirected to Auth0 login page
     // which on successful login will redirect the user back to /callback
     // route with the code parameter
-    if (!keys && parsedUrl.pathname !== "/callback") {
+    const url = new URL(context.request.url)
+    if (!auth && url.pathname !== "/callback") {
         console.log("🚏 🚥 1️⃣  User isn't logged in")
         try {
             const requestState = await generateStateValue()
@@ -51,7 +51,7 @@ export async function onRequest(context) {
                 expirationTtl: 600,
             })
 
-            let url = "https://dev-v3vdfzghznzkmkfh.us.auth0.com/authorize"
+            let authorizeUrl = "https://dev-v3vdfzghznzkmkfh.us.auth0.com/authorize"
             let params = {
                 response_type: "code",
                 client_id,
@@ -60,12 +60,12 @@ export async function onRequest(context) {
                 scope: "openid profile",
             }
 
-            url += "?" + new URLSearchParams(params).toString()
+            authorizeUrl += "?" + new URLSearchParams(params).toString()
             console.log("Redirecting to Auth0 /authorize endpoint to get a code.....")
             return new Response(null, {
                 status: 302,
                 headers: {
-                    Location: url,
+                    Location: authorizeUrl,
                 },
             })
         } catch (error) {
@@ -74,7 +74,8 @@ export async function onRequest(context) {
     }
 
     // Case 2: Check for code in callback and make a call for tokens
-    if (parsedUrl.pathname === "/callback") {
+    let { code } = await getParams(context.request.url, ["code", "state"])
+    if (url.pathname === "/callback") {
         console.log("🚏 🚥 2️⃣  Callback after login")
         console.log("Code returned from Auth0:", code)
 
@@ -96,13 +97,7 @@ export async function onRequest(context) {
         return new Response("", await persistAuth(resp, KVState))
     }
 
-    // Case 3: User is logged in, continue
-    try {
-        console.log("⏩ middleware next...")
-        return await context.next()
-    } catch (err) {
-        return new Response(`${err.message}\n${err.stack}`, { status: 500 })
-    }
+    return new Response(`${err.message}\n${err.stack}`, { status: 500 })
 }
 
 ///////////
@@ -259,6 +254,17 @@ async function putSession(data) {
  * @returns number
  */
 export const dateInSecs = (d) => Math.ceil(Number(d) / 1000)
+
+// Utility to store a state param in KV
+// Predominantly the value is the URL requested by the user when this.authorize is called
+async function generateStateParam(data) {
+    const resp = await fetch("https://csprng.xyz/v1/api")
+    const { Data: state } = await resp.json()
+    await kv.put(`state-${state}`, data, {
+        expirationTtl: 600,
+    })
+    return state
+}
 
 // Curl request with cookie header
 // curl -H "loku-cookie: hello" http://localhost:8788
