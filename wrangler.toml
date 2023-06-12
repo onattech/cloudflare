@@ -1,9 +1,0 @@
-# Top-level configuration
-name = "cloudflare-worker"
-main = "functions/index.mjs"
-compatibility_date = "2023-05-18"
-
-# route = { pattern = "https://cloudflare-bls.pages.dev/*", zone_name = "cloudflare-bls.pages.dev" }
-
-[site]
-bucket = "./build" # <-- Add your build directory name here.
