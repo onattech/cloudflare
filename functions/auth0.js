@@ -17,24 +17,12 @@ export default class Auth0 {
     #clientSecret = null // Auth0 client secret
     constructor(env) {
         this.#env = env
-
-        // this.domain = env.AUTH0_DOMAIN // Auth0 tenant domain
-        this.domain = "dev-v3vdfzghznzkmkfh.us.auth0.com" // Temp for line above
-
-        // this.clientId = env.AUTH0_CLIENT_ID // Auth0 client ID
-        this.clientId = "YvxH3l3ISyUtPfLhh0lxbKfQ01vKEVOD" // Temp for line above
-
-        // this.#clientSecret = env.AUTH0_CLIENT_SECRET // Auth0 client secret
-        this.#clientSecret = "Fb4iyR08oqVrBuOA2V-4d4w-W-aWhCeO80pNVEpe_KfPaM7Fmqk1vqtcVX1lih4x" // Temp for line above
-
-        this.callbackUrl = env.AUTH0_CALLBACK_URL // Current application's callback URL
-        this.callbackUrl = "http://localhost:8787" // Temp for line above
-
-        this.cookieKey = env.AUTH0_COOKIE_KEY // Key for auth cookie, non-secret string
-        this.cookieKey = "loku-cookie" // Temp for line above
-
-        this.cookieDomain = env.AUTH0_COOKIE_DOMAIN // Domain for auth cookie, e.g. example.com
-        this.cookieDomain = "example.com" // Temp for line above
+        this.domain = env.AUTH0_DOMAIN // Auth0 tenant domain => "dev-v3vdfzghznzkmkfh.us.auth0.com"
+        this.clientId = env.AUTH0_CLIENT_ID // Auth0 client ID => "YvxH3l3ISyUtPfLhh0lxbKfQ01vKEVOD"
+        this.#clientSecret = env.AUTH0_CLIENT_SECRET // Auth0 client secret => "Fb4iyR08oqVrBuOA2V-4d4w-W-aWhCeO80pNVEpe_KfPaM7Fmqk1vqtcVX1lih4x"
+        this.callbackUrl = env.AUTH0_CALLBACK_URL // Current application's callback URL => "http://localhost:8788/callback"
+        this.cookieKey = env.AUTH0_COOKIE_KEY // Key for auth cookie, non-secret string => "auth-session"
+        this.cookieDomain = env.AUTH0_COOKIE_DOMAIN // Domain for auth cookie, "cloudflare-bls.pages.dev"
 
         this.logoutUrl = `https://${this.domain}/v2/logout` + `?client_id=${this.clientId}&returnTo=${env.AUTH0_LOGOUT_URL}`
     }
@@ -253,5 +241,31 @@ export default class Auth0 {
             ...options,
         }
         return cookie.serialize(key, value, options)
+    }
+
+    // Logs user out locally and at Auth0
+    async logout(request) {
+        // Get cookies
+        const cookieHeader = request.headers.get("Cookie")
+        // Set up headers
+        let headers = {
+            Location: this.logoutUrl,
+        }
+
+        // Delete existing cookie
+        if (cookieHeader && cookieHeader.includes(this.cookieKey)) {
+            // Reset cookie in response header
+            headers["Set-Cookie"] = this.serializedCookie(this.cookieKey, "", {
+                expires: new Date(), // expire now
+            })
+            // Parse incoming cookie to identify session
+            const cookies = cookie.parse(cookieHeader)
+            // We have an existing session, so delete it
+            if (typeof cookies[this.cookieKey] !== "undefined") {
+                const id = cookies[this.cookieKey]
+                await this.deleteSession(id)
+            }
+        }
+        return { headers, status: 302 }
     }
 }
