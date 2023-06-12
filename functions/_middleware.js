@@ -51,7 +51,7 @@ export async function onRequest(context) {
                 expirationTtl: 600,
             })
 
-            let authorizeUrl = "https://dev-v3vdfzghznzkmkfh.us.auth0.com/authorize"
+            let authorizeUrl = `https://${domain}/authorize`
             let params = {
                 response_type: "code",
                 client_id,
