@@ -152,7 +152,7 @@ async function verifySession(request) {
         }
 
         const id = cookies[cookiekey]
-        const kvData = await kv.get("id-" + id)
+        const kvData = await getSession(id)
 
         if (!kvData) {
             // We have a cookie but the KV data is missing or expired
@@ -233,6 +233,16 @@ function serializedCookie(key, value, options = {}) {
         ...options,
     }
     return cookie.serialize(key, value, options)
+}
+
+// Utility functions to handle session-storage in KV
+// If we want an extra layer of security, we can encrypt the values in KV
+async function deleteSession(id) {
+    await kv.delete(`id-${id}`)
+}
+
+async function getSession(id) {
+    return kv.get(`id-${id}`)
 }
 
 // Store session data and return the id
