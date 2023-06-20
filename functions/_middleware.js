@@ -31,10 +31,10 @@ export async function onRequest(context) {
     cookiedomain = context.env.COOKIEDOMAIN
     kv = context.env.KV
 
-    // Check for session
+    // Case 0: Check for session cookie to verify if the user is already logged in
     const auth = await verifySession(context.request)
     if (auth && auth.accessToken) {
-        console.log("⏩ middleware next...")
+        console.log("🔓 authenticated ⏩ middleware next...")
         return await context.next()
     }
 
@@ -45,18 +45,14 @@ export async function onRequest(context) {
     if (!auth && url.pathname !== "/callback") {
         console.log("🚏 🚥 1️⃣  User isn't logged in")
         try {
-            const requestState = await generateStateValue()
-            console.log("Setting request state in KV:", requestState)
-            await kv.put("State", requestState, {
-                expirationTtl: 600,
-            })
+            const requestState = await generateStateParam(url.href)
 
             let authorizeUrl = `https://${domain}/authorize`
             let params = {
                 response_type: "code",
                 client_id,
                 redirect_uri,
-                state: requestState,
+                state: requestState, // TODO: Make sure state is checked!!!
                 scope: "openid profile",
             }
 
@@ -73,28 +69,14 @@ export async function onRequest(context) {
         }
     }
 
-    // Case 2: Check for code in callback and make a call for tokens
-    let { code } = await getParams(context.request.url, ["code", "state"])
+    // Case 2: User has successfully logged in at Auth0 login page and has been
+    // redirected to /callback. Middleware will now verify code in callback and make a call for tokens
+    // and store them in a cookie. This will make case 0 true next time the page is visited.
     if (url.pathname === "/callback") {
         console.log("🚏 🚥 2️⃣  Callback after login")
-        console.log("Code returned from Auth0:", code)
 
-        const body = JSON.stringify({
-            grant_type: "authorization_code",
-            client_id,
-            client_secret,
-            audience: client_id,
-            code,
-            redirect_uri,
-        })
-
-        const resp = await fetch(`https://${domain}/oauth/token`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body,
-        })
-        const KVState = await kv.get("State")
-        return new Response("", await persistAuth(resp, KVState))
+        const resultHeaders = await handleCallback(context.request)
+        return new Response("", resultHeaders)
     }
 
     return new Response(`${err.message}\n${err.stack}`, { status: 500 })
@@ -175,6 +157,51 @@ async function verifySession(request) {
     return null
 }
 
+// Returns initialization object for Response
+async function handleCallback(request) {
+    const url = new URL(request.url)
+
+    // Check state param
+    let state = url.searchParams.get("state")
+    if (!state) {
+        return null
+    }
+    state = decodeURIComponent(state)
+    // Fetch stored state (from this.generateStateParam)
+    const storedState = await kv.get(`state-${state}`)
+    if (!storedState) {
+        return null
+    }
+
+    // We're using code type flow, exchange for auth token
+    const code = url.searchParams.get("code")
+    if (code) {
+        // Return value is defined by this.persistAuth
+        return exchangeCode(code, storedState)
+    }
+    return null
+}
+
+// Make a request for an auth token and store it in KV
+async function exchangeCode(code, storedState) {
+    const body = JSON.stringify({
+        grant_type: "authorization_code",
+        client_id,
+        client_secret,
+        code,
+        redirect_uri,
+    })
+    // Persist in KV
+    return persistAuth(
+        await fetch(`https://${domain}/oauth/token`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body,
+        }),
+        storedState
+    )
+}
+
 /**
  * Calls this.validateToken and persists the token in KV session store
  * @param {Promise} exchange Response from the token exchange endpoint
@@ -206,8 +233,7 @@ async function persistAuth(exchange, storedState) {
 
     // Make headers and set cookie with session ID
     const headers = {
-        // Location: new URL(storedState)?.href || "/",
-        Location: "/",
+        Location: new URL(storedState)?.href || "/",
         "Set-Cookie": serializedCookie(cookiekey, id, {
             expires: date,
         }),

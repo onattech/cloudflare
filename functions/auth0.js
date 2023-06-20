@@ -64,7 +64,7 @@ export default class Auth0 {
             expirationTtl: 600,
         })
         return state
-    }
+    } // ✅️
 
     /**
      * Verify a user's session against the KV store
@@ -126,7 +126,7 @@ export default class Auth0 {
             expirationTtl: 86400, // 1 day
         })
         return id
-    }
+    } // ✅️
 
     /**
      * Gateway method to handle all auth requests, calls multiple other methods in this class
@@ -169,7 +169,7 @@ export default class Auth0 {
             return this.exchangeCode(code, storedState)
         }
         return null
-    }
+    } // ✅️
 
     // Make a request for an auth token and store it in KV
     async exchangeCode(code, storedState) {
@@ -189,7 +189,7 @@ export default class Auth0 {
             }),
             storedState
         )
-    }
+    } // ✅️
 
     /**
      * Calls this.validateToken and persists the token in KV session store
@@ -228,7 +228,7 @@ export default class Auth0 {
             }),
         }
         return { headers, status: 302 }
-    }
+    } // ✅️
 
     // Returns a serialized cookie string ready to be set in headers
     serializedCookie(key, value, options = {}) {
