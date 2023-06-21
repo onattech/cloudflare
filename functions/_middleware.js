@@ -18,7 +18,7 @@ let redirect_uri = ""
 let cookiekey = ""
 let cookiedomain = ""
 let kv = null
-const oneDay = 86400
+const oneDay = 60
 const tenMinutes = 600
 
 export async function onRequest(context) {
