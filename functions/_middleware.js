@@ -19,7 +19,7 @@ let cookiekey = ""
 let cookiedomain = ""
 let kv = null
 const oneDay = 60
-const tenMinutes = 600
+const tenMinutes = 60
 
 export async function onRequest(context) {
     console.log("\n📢 Middleware called at", context.request.url)
