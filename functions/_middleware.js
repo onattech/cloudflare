@@ -18,6 +18,8 @@ let redirect_uri = ""
 let cookiekey = ""
 let cookiedomain = ""
 let kv = null
+const oneDay = 86400
+const tenMinutes = 600
 
 export async function onRequest(context) {
     console.log("\n📢 Middleware called at", context.request.url)
@@ -52,7 +54,7 @@ export async function onRequest(context) {
                 response_type: "code",
                 client_id,
                 redirect_uri,
-                state: requestState, // TODO: Make sure state is checked!!!
+                state: requestState,
                 scope: "openid profile",
             }
 
@@ -95,7 +97,7 @@ async function validateIDToken(token) {
     // Verify JWT. Auth0 recommends jose: https://jwt.io/libraries?language=JavaScript
     const { payload } = await jose.jwtVerify(token, jwks, {
         audience: client_id, // verify audience claim
-        maxTokenAge: "12 hours", // verify max age of token
+        maxTokenAge: oneDay, // verify max age of token
     })
 
     // Verify issuer claim
@@ -145,6 +147,7 @@ async function verifySession(request) {
         } catch (err) {
             // Invalid stored session
             await deleteSession(id)
+            // TODO: Redirect instead....
             throw new Error("Unable to parse auth information from Workers KV")
         }
         if (!userInfo || !userInfo.sub) {
@@ -229,7 +232,7 @@ async function persistAuth(exchange, storedState) {
     // Store exchange response body in KV (session handling) after validation
     const id = await putSession(JSON.stringify(body))
     const date = new Date()
-    date.setDate(date.getDate() + 1) // 1 day
+    date.setTime(date.getTime() + oneDay * 1000)
 
     // Make headers and set cookie with session ID
     const headers = {
@@ -269,7 +272,7 @@ async function getSession(id) {
 async function putSession(data) {
     const id = crypto.randomUUID()
     await kv.put(`id-${id}`, data, {
-        expirationTtl: 86400, // 1 day
+        expirationTtl: oneDay,
     })
     return id
 }
@@ -287,7 +290,7 @@ async function generateStateParam(data) {
     const resp = await fetch("https://csprng.xyz/v1/api")
     const { Data: state } = await resp.json()
     await kv.put(`state-${state}`, data, {
-        expirationTtl: 600,
+        expirationTtl: tenMinutes,
     })
     return state
 }
