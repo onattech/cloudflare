@@ -18,8 +18,8 @@ let redirect_uri = ""
 let cookiekey = ""
 let cookiedomain = ""
 let kv = null
-const oneDay = 60
-const tenMinutes = 60
+const oneDay = 86400
+const tenMinutes = 600
 
 export async function onRequest(context) {
     console.log("\n📢 Middleware called at", context.request.url)
