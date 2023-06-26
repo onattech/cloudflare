@@ -32,9 +32,20 @@ export async function onRequest(context) {
     cookiedomain = context.env.COOKIEDOMAIN
     kv = context.env.KV
 
+    const url = new URL(context.request.url)
+
     // Case 0: Check for session cookie to verify if the user is already logged in
     const auth = await verifySession(context.request)
     if (auth && auth.accessToken) {
+        if (url.pathname === "/login" || url.pathname === "/login/") {
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: "/",
+                },
+            })
+        }
+
         console.log("🔓 authenticated ⏩ middleware next...")
         return await context.next()
     }
@@ -42,8 +53,7 @@ export async function onRequest(context) {
     // Case 1: User isn't logged in. Gets redirected to Auth0 login page
     // which on successful login will redirect the user back to /callback
     // route with the code parameter
-    const url = new URL(context.request.url)
-    if (!auth && url.pathname !== "/callback") {
+    if (!auth && url.pathname === "/login/") {
         console.log("🚏 🚥 1️⃣  User isn't logged in")
         try {
             const requestState = await generateStateParam(url.href)
