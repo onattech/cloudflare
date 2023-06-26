@@ -76,8 +76,8 @@ const config = {
                     },
                     { to: "/blog", label: "Blog", position: "left" },
                     {
-                        to: "/login",
-                        label: "Login",
+                        to: "/logout",
+                        label: "Logout",
                         position: "right",
                     },
                     {
