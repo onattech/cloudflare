@@ -90,7 +90,7 @@ export async function onRequest(context) {
         return new Response("", resultHeaders)
     }
 
-    return new Response(`${err.message}\n${err.stack}`, { status: 500 })
+    return new Response(`Unable to authenticate`, { status: 500 })
 }
 
 ///////////
