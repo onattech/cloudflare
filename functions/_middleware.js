@@ -146,8 +146,16 @@ async function verifySession(request) {
         } catch (err) {
             // Invalid stored session
             await deleteSession(id)
-            // TODO: Redirect instead....
-            throw new Error("Unable to parse auth information from Workers KV")
+
+            console.log("Unable to parse auth information from Workers KV, redirecting to login...")
+            return null
+
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: "/",
+                },
+            })
         }
         if (!userInfo || !userInfo.sub) {
             return null
