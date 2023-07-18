@@ -1,6 +1,6 @@
-DOMAIN= 
-CLIENT_ID=
-CLIENT_SECRET=
-REDIRECT_URI=
-COOKIEKEY=
-COOKIEDOMAIN=
+DOMAIN=[from-auth0]
+CLIENT_ID=[from-auth0]
+CLIENT_SECRET=[from-auth0]
+REDIRECT_URI=http://localhost:8788/callback
+COOKIEKEY=auth-session
+COOKIEDOMAIN=localhost
