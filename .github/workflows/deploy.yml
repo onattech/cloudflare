@@ -19,5 +19,5 @@ jobs:
             - name: Push to target repository
               run: |
                   cd source-repo
-                  git remote add target origin https://github.com/onattech/cloudflare-public.git
+                  git remote add origin https://github.com/onattech/cloudflare-public.git
                   git push target main
