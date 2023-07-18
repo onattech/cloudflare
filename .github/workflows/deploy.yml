@@ -21,4 +21,4 @@ jobs:
                   git config --global user.name "onattech"
                   git config --global user.email "onattech@example.com"
                   git remote add target https://github.com/onattech/cloudflare-public.git
-                  git push target HEAD:main
+                  git push -f target HEAD:main
