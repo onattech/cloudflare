@@ -36,7 +36,9 @@ export async function onRequest(context) {
     const auth = await verifySession(context.request)
     if (auth && auth.accessToken) {
         console.log("🔓 authenticated ⏩ middleware next...")
-        return await context.next()
+        const response = await context.next()
+        response.headers.set("X-Username", auth.userInfo.nickname)
+        return response
     }
 
     // Case 1: User isn't logged in. Gets redirected to Auth0 login page
