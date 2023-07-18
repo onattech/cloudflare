@@ -37,7 +37,10 @@ export async function onRequest(context) {
     if (auth && auth.accessToken) {
         console.log("🔓 authenticated ⏩ middleware next...")
         const response = await context.next()
-        response.headers.set("X-Username", auth.userInfo.nickname)
+        response.headers.append(
+            "Set-Cookie",
+            `username=${encodeURIComponent(auth.userInfo.nickname)}; Secure; Path=/; SameSite=None;`
+        )
         return response
     }
 
