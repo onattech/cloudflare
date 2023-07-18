@@ -13,7 +13,7 @@ jobs:
             - name: Checkout source repository
               uses: actions/checkout@v2
               with:
-                  repository: onattech/cloudflare-public
+                  repository: onattech/cloudflare
                   token: ${{ secrets.TOKEN }}
 
             - name: Push to target repository
