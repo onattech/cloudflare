@@ -16,6 +16,9 @@ jobs:
                   repository: onattech/cloudflare
                   token: ${{ secrets.TOKEN }}
 
+            - name: ls
+              run: ls
+
             - name: Push to target repository
               run: |
                   git config --global user.name "Onat"
