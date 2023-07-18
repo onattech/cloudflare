@@ -18,7 +18,9 @@ jobs:
 
             - name: ls
               run: |
-                  rm functions/_middleware.js
+                  rm ./functions/_middleware.js
+                  cd ./functions
+                  ls
 
             - name: Push to target repository
               run: |
