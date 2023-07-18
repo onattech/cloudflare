@@ -18,5 +18,7 @@ jobs:
 
             - name: Push to target repository
               run: |
-                  git remote add target origin https://github.com/onattech/cloudflare-public.git
-                  git push target main
+                  git config --global user.name "onattech"
+                  git config --global user.email "onattech@example.com"
+                  git remote add target https://github.com/onattech/cloudflare-public.git
+                  git push target HEAD:main
